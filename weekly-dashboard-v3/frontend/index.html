@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프로젝트영업담당 주간보고 대시보드</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { DEFAULT:'#A50034', light:'#f5e6ea', dark:'#7a0025' },
+        accent: { DEFAULT:'#00A3E0', light:'#e6f6fd' },
+        ink: '#111827', surface: '#F7F7FB', line: '#E6E8EF'
+      },
+      fontFamily: {
+        sans: ['"Noto Sans KR"','Apple SD Gothic Neo','Malgun Gothic','sans-serif'],
+        mono: ['"DM Mono"','monospace']
+      }
+    }
+  }
+}
+</script>
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;background:#F7F7FB;color:#111827}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#A50034 0%,#7a0025 45%,#003a5c 100%)}
+
+/* Sticky Exec */
+#exec-sticky{
+  position:sticky;top:0;z-index:60;
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(18px) saturate(1.6);
+  border-bottom:1px solid rgba(230,232,239,.9);
+  box-shadow:0 2px 20px rgba(165,0,52,.07);
+}
+.exec-row{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(165,0,52,.1)}
+.exec-row:last-child{border-bottom:none}
+.exec-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-width:20px;background:#A50034;color:#fff;border-radius:50%;font-size:10px;font-weight:700;margin-top:2px;flex-shrink:0}
+
+/* Nav */
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .18s;font-size:12px;font-weight:500;color:#4b5563;border:1.5px solid transparent;width:100%;text-align:left}
+.nav-item:hover{background:#f5e6ea;color:#A50034}
+.nav-item.active{background:#A50034;color:#fff;font-weight:700}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.nav-dot-정상{background:#22c55e}
+.nav-dot-주의{background:#eab308;box-shadow:0 0 0 2px #fef9c3}
+.nav-dot-위험{background:#ef4444;animation:blink 1.5s infinite}
+
+/* KPI Card */
+.kpi-card{background:#fff;border:1.5px solid #E6E8EF;border-radius:1.125rem;box-shadow:0 1px 3px rgba(17,24,39,.06),0 4px 16px -4px rgba(17,24,39,.08);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#E6E8EF}
+.kpi-card.status-정상::before{background:#22c55e}
+.kpi-card.status-주의::before{background:#eab308}
+.kpi-card.status-위험::before{background:#ef4444}
+.kpi-card:hover{box-shadow:0 4px 24px -4px rgba(165,0,52,.18);transform:translateY(-2px);border-color:#A50034}
+.kpi-card.selected{border-color:#A50034;box-shadow:0 0 0 2.5px #A50034,0 4px 24px -4px rgba(165,0,52,.22)}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-정상{background:#dcfce7;color:#166534}
+.badge-주의{background:#fef9c3;color:#854d0e}
+.badge-위험{background:#fee2e2;color:#991b1b}
+
+/* Filter */
+.fbtn{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:600;border:1.5px solid #E6E8EF;background:#fff;color:#6b7280;cursor:pointer;transition:all .15s}
+.fbtn:hover{border-color:#A50034;color:#A50034}
+.fbtn.active{background:#A50034;color:#fff;border-color:#A50034}
+
+/* Detail Panel */
+#detail-panel{background:#fff;border:1.5px solid #E6E8EF;border-radius:1.5rem;box-shadow:0 2px 16px rgba(17,24,39,.07);overflow-y:auto}
+
+/* ── 상세 3열 섹션 (이미지2 스타일) ── */
+.det-section{border-radius:1rem;border:1.5px solid #E6E8EF;overflow:hidden;flex:1}
+.det-head{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.det-ok .det-head{background:#f0fdf4;color:#15803d;border-bottom:1px solid #bbf7d0}
+.det-risk .det-head{background:#fef2f2;color:#b91c1c;border-bottom:1px solid #fecaca}
+.det-next .det-head{background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #bfdbfe}
+.det-body{padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.det-item{display:flex;gap:10px;padding:7px 8px;border-radius:8px;font-size:12.5px;line-height:1.6;color:#374151;transition:background .15s;align-items:flex-start}
+.det-item:hover{background:#f9fafb}
+.det-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;font-weight:800}
+
+/* Shared Issues */
+.issue-pill{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;font-size:11px;color:#1e40af;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+
+/* Upload Zone */
+#upload-zone{border:2px dashed #E6E8EF;border-radius:1.25rem;transition:all .2s;cursor:pointer}
+#upload-zone:hover,.dragover{border-color:#A50034!important;background:#fff5f7!important}
+
+/* Input tabs */
+.input-tab{padding:6px 16px;border-radius:999px;font-size:12px;font-weight:600;border:1.5px solid #E6E8EF;background:#fff;color:#6b7280;cursor:pointer;transition:all .15s}
+.input-tab.active{background:#A50034;color:#fff;border-color:#A50034}
+
+/* Textarea */
+#text-input-area{width:100%;border:1.5px solid #E6E8EF;border-radius:12px;padding:12px;font-size:12px;font-family:'Noto Sans KR',sans-serif;resize:vertical;outline:none;transition:border-color .2s;background:#fff;color:#111827}
+#text-input-area:focus{border-color:#A50034}
+
+/* Buttons */
+.btn-hero{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;font-size:12px;font-weight:600;padding:6px 16px;cursor:pointer;transition:all .18s}
+.btn-hero:hover{background:rgba(255,255,255,.28)}
+.btn-reset{background:transparent;border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);border-radius:999px;font-size:12px;padding:6px 14px;cursor:pointer;transition:all .18s}
+.btn-reset:hover{border-color:rgba(255,255,255,.5);color:#fff}
+.btn-analyze{background:#A50034;color:#fff;border:none;border-radius:999px;padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;font-family:inherit}
+.btn-analyze:hover{background:#7a0025;box-shadow:0 4px 12px rgba(165,0,52,.3)}
+.btn-analyze:disabled{background:#d1d5db;cursor:not-allowed}
+
+/* Loading */
+#loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);backdrop-filter:blur(4px);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid #E6E8EF;border-top:3px solid #A50034;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{box-shadow:0 0 0 2px #fee2e2}50%{box-shadow:0 0 0 4px #fecaca}}
+.anim-fade{animation:fadeUp .35s ease both}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#E6E8EF;border-radius:99px}
+
+/* Error toast */
+#error-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#991b1b;color:#fff;padding:12px 24px;border-radius:999px;font-size:13px;font-weight:600;z-index:200;display:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+
+<!-- ══ 로딩 오버레이 ══ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p style="font-size:14px;font-weight:600;color:#A50034">Gemini AI가 문서를 분석 중입니다...</p>
+  <p style="font-size:12px;color:#6b7280">잠시만 기다려 주세요 (10~30초 소요)</p>
+</div>
+
+<!-- ══ 에러 토스트 ══ -->
+<div id="error-toast"></div>
+
+<!-- ══════════════════ UPLOAD SCREEN ══════════════════ -->
+<div id="screen-upload" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px">
+  <div style="width:100%;max-width:600px">
+
+    <!-- Hero -->
+    <div class="hero" style="border-radius:20px;padding:32px;margin-bottom:24px;text-align:center;color:#fff">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:4px">
+        <svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="rgba(255,255,255,.15)"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="sans-serif">LG</text></svg>
+        <span style="font-size:22px;font-weight:800;letter-spacing:-.5px">프로젝트영업담당</span>
+      </div>
+      <p style="color:rgba(255,255,255,.55);font-size:13px;margin-top:4px">주간보고 대시보드 자동 생성기 v3 · Gemini AI</p>
+    </div>
+
+    <!-- Input Method Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="input-tab active" id="tab-file" onclick="switchTab('file')">📎 파일 업로드</button>
+      <button class="input-tab" id="tab-text" onclick="switchTab('text')">✏️ 텍스트 직접 입력</button>
+    </div>
+
+    <!-- ── 파일 업로드 탭 ── -->
+    <div id="panel-file">
+      <div id="upload-zone" onclick="document.getElementById('fi').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event)"
+           style="background:#fff;padding:40px;text-align:center">
+        <div style="width:56px;height:56px;margin:0 auto 14px;border-radius:14px;background:#f5e6ea;display:flex;align-items:center;justify-content:center">
+          <svg width="26" height="26" fill="none" viewBox="0 0 28 28"><path d="M14 4v14M8 10l6-6 6 6" stroke="#A50034" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 22h20" stroke="#A50034" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p style="font-weight:700;color:#111827;margin-bottom:4px">파일을 드래그하거나 클릭하여 업로드</p>
+        <p style="font-size:12px;color:#9ca3af">지원 형식: .txt · .json · .docx · .pdf</p>
+        <input type="file" id="fi" accept=".txt,.json,.docx,.pdf" style="display:none" onchange="handleFile(this.files[0])">
+      </div>
+      <div id="file-selected" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:12px;color:#15803d;display:none;align-items:center;gap:8px">
+        <span>📄</span><span id="file-name"></span>
+      </div>
+    </div>
+
+    <!-- ── 텍스트 직접 입력 탭 ── -->
+    <div id="panel-text" style="display:none">
+      <div style="background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:16px">
+        <p style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.6">
+          주간보고 내용을 직접 붙여넣으세요.<br>
+          <span style="color:#A50034;font-weight:600">JSON 형식</span>이면 Gemini 분석 없이 즉시 대시보드로 변환됩니다.<br>
+          <span style="color:#6b7280">일반 텍스트</span>는 Gemini AI가 자동 분석합니다.
+        </p>
+        <textarea id="text-input-area" rows="10" placeholder="여기에 주간보고 내용 또는 JSON을 붙여넣으세요...
+
+예시 (JSON):
+{
+  &quot;weekNumber&quot;: &quot;W14&quot;,
+  &quot;teams&quot;: [...]
+}
+
+예시 (텍스트):
+프로젝트1팀: 이번 주 양평 AI 테마파크 시행사 대상 선행영업..."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <span id="char-count" style="font-size:11px;color:#9ca3af">0자</span>
+          <button onclick="clearTextInput()" style="font-size:11px;color:#9ca3af;background:none;border:none;cursor:pointer;text-decoration:underline">지우기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 분석 버튼 -->
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <button class="btn-analyze" id="btn-analyze" onclick="startAnalysis()" style="flex:1">
+        🔍 Gemini AI로 분석 시작
+      </button>
+    </div>
+
+    <!-- 샘플 데이터 -->
+    <div style="margin-top:10px;text-align:center">
+      <button onclick="loadSample()" style="font-size:12px;color:#00A3E0;text-decoration:underline;background:none;border:none;cursor:pointer">샘플 데이터로 미리보기 (API 불필요)</button>
+    </div>
+
+    <!-- 서버 상태 -->
+    <div id="server-status" style="margin-top:12px;padding:10px 14px;border-radius:10px;font-size:12px;border:1.5px solid #E6E8EF;background:#fff;display:flex;align-items:center;gap:8px">
+      <span id="status-dot" style="width:8px;height:8px;border-radius:50%;background:#d1d5db;flex-shrink:0"></span>
+      <span id="status-text" style="color:#6b7280">서버 연결 확인 중...</span>
+    </div>
+
+    <!-- 사용 방법 -->
+    <div style="margin-top:16px;background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:20px">
+      <p style="font-size:11px;font-weight:800;color:#A50034;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">사용 방법</p>
+      <ol style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px">
+        <li style="display:flex;gap:8px;font-size:12px;color:#6b7280"><span style="font-weight:800;color:#A50034;min-width:16px">①</span>backend 폴더에서 <code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">npm install</code> 및 <code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">npm start</code> 실행</li>
+        <li style="display:flex;gap:8px;font-size:12px;color:#6b7280"><span style="font-weight:800;color:#A50034;min-width:16px">②</span>주간보고 파일 업로드 또는 텍스트 직접 입력</li>
+        <li style="display:flex;gap:8px;font-size:12px;color:#6b7280"><span style="font-weight:800;color:#A50034;min-width:16px">③</span>Gemini AI 분석 버튼 클릭 → 대시보드 자동 생성</li>
+        <li style="display:flex;gap:8px;font-size:12px;color:#6b7280"><span style="font-weight:800;color:#A50034;min-width:16px">④</span>대시보드 저장 클릭 → HTML 파일로 팀 공유</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DASHBOARD SCREEN ══════════════════ -->
+<div id="screen-dashboard" style="display:none;flex-direction:column;height:100vh">
+
+  <!-- Header -->
+  <div class="hero" style="padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="rgba(255,255,255,.15)"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="sans-serif">LG</text></svg>
+      <div>
+        <span style="color:#fff;font-weight:800;font-size:15px;letter-spacing:-.3px">프로젝트영업담당 주간보고</span>
+        <span id="header-meta" style="margin-left:12px;color:rgba(255,255,255,.45);font-size:11px;font-family:'DM Mono',monospace"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-hero" onclick="downloadDashboard()">⬇ 대시보드 저장</button>
+      <button class="btn-reset" onclick="resetApp()">↩ 새 파일</button>
+    </div>
+  </div>
+
+  <!-- Executive Summary Sticky -->
+  <div id="exec-sticky" style="padding:10px 24px;flex-shrink:0">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect width="16" height="16" rx="4" fill="#A50034"/><path d="M4 8h8M4 5.5h5M4 10.5h6" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span style="font-size:11px;font-weight:800;color:#A50034;text-transform:uppercase;letter-spacing:.1em">Executive Summary</span>
+      </div>
+      <div id="exec-rows" style="padding-left:4px;display:flex;flex-direction:column;gap:0"></div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div style="display:flex;flex:1;overflow:hidden;gap:16px;padding:12px 16px;max-width:1280px;margin:0 auto;width:100%">
+
+    <!-- LEFT: Nav + Shared Issues -->
+    <div style="width:188px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:12px">
+        <p style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;padding:0 4px;margin-bottom:8px">팀 목록</p>
+        <nav id="team-nav" style="display:flex;flex-direction:column;gap:4px"></nav>
+      </div>
+      <div style="background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:12px;flex:1;min-height:0;overflow-y:auto">
+        <p style="font-size:10px;font-weight:800;color:#00A3E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">공유 이슈</p>
+        <div id="shared-issues" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Cards + Detail -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-width:0">
+
+      <!-- Filter + Search -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <div id="filter-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <div style="position:relative;margin-left:auto">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#d1d5db" width="13" height="13" fill="none" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="search" type="text" placeholder="키워드 검색…" oninput="renderCards()"
+            style="padding:6px 12px 6px 30px;font-size:11px;border:1.5px solid #E6E8EF;border-radius:999px;outline:none;background:#fff;width:152px;font-family:inherit"/>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0"></div>
+
+      <!-- ── Detail Panel (이미지2 스타일: 가로 레이아웃) ── -->
+      <div id="detail-panel" style="flex:1;padding:24px;overflow-y:auto">
+        <div id="detail-inner" style="font-size:13px;color:#9ca3af;display:flex;align-items:center;justify-content:center;height:100%">
+          팀 카드를 선택하면 상세 내용이 표시됩니다.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCRIPT ══════════════════ -->
+<script>
+/* ─── State ─── */
+let DATA = null, activeTeam = null, activeFilter = '전체';
+let currentTab = 'file', selectedFile = null;
+const API_BASE = 'http://localhost:3000/api/analyze';
+
+/* ─── Sample Data ─── */
+const SAMPLE = {
+  reportDate:"2025-04-07", weekNumber:"W14",
+  executiveSummary:[
+    "대형 복합개발 및 인프라 프로젝트 중심으로 전사 영업 파이프라인은 안정적으로 유지되고 있음",
+    "프로젝트2팀 등 일부 팀에서 구매 방식 및 의사결정 지연으로 인한 일정 리스크가 관찰됨",
+    "설계·PM·제안팀 연계를 통해 장기 파이프라인의 안정성은 확보되어 있으며 차주 PT 대응 집중 필요"
+  ],
+  sharedIssues:[
+    "복수 팀에서 인테리어·설계사무소 선정 지연 언급 → 영업 일정 직접 영향",
+    "BIPV 관련 설계 반영 협업이 다수 팀에서 동시 진행 → 통합 대응 및 정보 공유 필요"
+  ],
+  teams:[
+    {teamName:"프로젝트1팀",kpi:"W14 현장수 177건 / 금액 3,257억",status:"정상",summary:"기존 대형 프로젝트 선행영업과 신규 콘도 리모델링 가전 발주 성과를 동시에 창출함.",highlights:["양평 AI 테마파크 시행사 대상 선행영업 미팅 실시","가산동 교학사 부지 BIPV 설계 반영 협업 진행","아일랜드캐슬 호텔 & 워터파크 콘도 1차 132세대 발주서 수취"],risks:["부산 다대포 한진중공업부지 개발사업 PF 연장 불확실성","시공사 선정 및 분양 일정(26년 하반기)에 따른 사업 지속성 리스크"],nextActions:["AI 테마파크 추가 미팅 및 자사+3rd Party 구성도 제안","BIPV 관련 최적 설계 추가 제안","CRM 기반 사업 지속 여부 모니터링"]},
+    {teamName:"프로젝트2팀",kpi:"On-going 영업기회 합계 11,452억",status:"주의",summary:"대형 복합개발 프로젝트를 중심으로 영업 활동을 지속하나 의사결정 지연 요소가 존재함.",highlights:["성수동 삼표 레미콘 부지 복합개발 구매팀 미팅 진행","효성중공업 3공장 BMS 설계 반영 요청 확보","셀트리온 오창 공장 공조/BMS 제안 참여"],risks:["성수동 프로젝트 가전 제품 선정 및 구매 방식 미확정","인테리어 업체 선정 지연에 따른 전체 일정 지연 가능성"],nextActions:["외산 대비 AS 및 편의 기능 차별화 지속 소구","BMS/BEMS 설계 도면 수취 후 진행","물류자동화 낙찰 연계 추가 공조 기회 발굴"]},
+    {teamName:"프로젝트3팀",kpi:"'26년 On-going 4,466억 / Win 129억",status:"정상",summary:"공항, 미디어, 공동주택 프로젝트 수주 및 설계 연계 활동을 안정적으로 수행함.",highlights:["인천국제공항 T1 사이니지 교체 사업 수주 완료","SBS 목동 본사 냉동기 교체 국책과제 협업","한양/솔라시도 공동주택 588세대 난방 전기화 참여"],risks:["국책과제 주관사 참여 제한으로 사업 범위 축소 가능성"],nextActions:["EHP 브랜드 통일 기반 추가 영업","BIPV 및 쓰레기 이송설비 연계 제안 확대","타 영업팀 협업 강화"]},
+    {teamName:"프로젝트4팀",kpi:"'26년 다수 프로젝트 On-going",status:"정상",summary:"R&D, 복합개발, 데이터센터 등 다수 영역에서 제안 및 견적 활동을 지속함.",highlights:["LGES 과천 R&D 캠퍼스 2단계 설계 도서 납품","유엔사 복합개발 IBS 투찰 완료","한미빌딩 개보수 ISC/BEMS/전기공사 제안(6억)"],risks:["대형 프로젝트 특성상 일정 장기화 가능성"],nextActions:["PT 대응 준비 집중","데이터센터 공동 제안 영업 확대","CPM 기술세미나 후 추가 기회 발굴"]},
+    {teamName:"프로젝트PM팀",kpi:"프로젝트 관리 누적 21건",status:"정상",summary:"영업 지원과 현장 관리 전반에 대한 지원 활동을 수행함.",highlights:["구미 스마트도시 조성사업 제안서 지원","더파크사이드 서울 IBS 공사 입찰 지원","다수 현장 자동제어 및 안전관리 수행"],risks:["현장 공정 및 안전 리스크 상존"],nextActions:["현장 시운전 및 하자 조치 지속","안전관리 지원 강화"]},
+    {teamName:"프로젝트제안팀",kpi:"'26년 누적 제안 접수 14건",status:"정상",summary:"복합개발 및 리모델링 프로젝트 대상 제안서 제작을 집중 수행함.",highlights:["도곡동 역세권 프로젝트 LCC 분석 기반 제안","목동 KT 부지 복합개발 3rd Party 추가 제안","ThinQ Pro 제안서 기획 및 자료 정리"],risks:["SPEC-IN 미확정 프로젝트 존재"],nextActions:["ThinQ Pro 관련 재미팅 대응","호텔·오피스 리모델링 제안 확대"]},
+    {teamName:"프로젝트설계팀",kpi:"'26년 목표 대비 달성률 100.4%",status:"정상",summary:"AI 데이터센터 및 공공·의료 시설 중심으로 설계 반영을 안정적으로 진행함.",highlights:["당진 석문 AI 데이터센터 설계 반영","전북대학교 냉난방기 하이브리드 설계","의료시설 리모델링 설계 수행"],risks:["대형 프로젝트 인허가 일정 변동 가능성"],nextActions:["인허가 도면 검토 지속","TOP 영업 기회 연계 설계 확대"]}
+  ]
+};
+
+/* ─── 서버 상태 확인 ─── */
+async function checkServer() {
+  try {
+    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    if (data.success) {
+      dot.style.background = '#22c55e';
+      txt.textContent = `서버 연결됨 · Gemini API ${data.geminiApiKey}`;
+      txt.style.color = '#15803d';
+    }
+  } catch {
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    dot.style.background = '#ef4444';
+    txt.textContent = '서버 미연결 · 샘플 데이터 또는 JSON 직접 입력을 사용하세요';
+    txt.style.color = '#991b1b';
+  }
+}
+
+/* ─── Tab 전환 ─── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-file').className = 'input-tab' + (tab==='file'?' active':'');
+  document.getElementById('tab-text').className = 'input-tab' + (tab==='text'?' active':'');
+  document.getElementById('panel-file').style.display = tab==='file' ? 'block' : 'none';
+  document.getElementById('panel-text').style.display = tab==='text' ? 'block' : 'none';
+}
+
+/* ─── 텍스트 글자수 ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('text-input-area');
+  if (ta) {
+    ta.addEventListener('input', () => {
+      document.getElementById('char-count').textContent = ta.value.length.toLocaleString() + '자';
+    });
+  }
+  checkServer();
+});
+
+function clearTextInput() {
+  document.getElementById('text-input-area').value = '';
+  document.getElementById('char-count').textContent = '0자';
+}
+
+/* ─── 파일 처리 ─── */
+function handleFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  const nameEl = document.getElementById('file-name');
+  const selectedEl = document.getElementById('file-selected');
+  nameEl.textContent = file.name;
+  selectedEl.style.display = 'flex';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+}
+
+/* ─── 분석 시작 ─── */
+async function startAnalysis() {
+  showLoading(true);
+
+  try {
+    // 탭에 따라 분기
+    if (currentTab === 'file') {
+      if (!selectedFile) { showError('파일을 먼저 선택해주세요.'); showLoading(false); return; }
+      await analyzeFile(selectedFile);
+    } else {
+      const text = document.getElementById('text-input-area').value.trim();
+      if (!text) { showError('텍스트를 입력해주세요.'); showLoading(false); return; }
+      await analyzeText(text);
+    }
+  } catch (err) {
+    showError(err.message || '분석 중 오류가 발생했습니다.');
+    showLoading(false);
+  }
+}
+
+async function analyzeFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/file`, { method:'POST', body: formData });
+  const data = await res.json();
+
+  if (!data.success) throw new Error(data.error || '파일 분석 실패');
+  showLoading(false);
+  initDashboard(data.data);
+}
+
+async function analyzeText(text) {
+  // JSON 직접 입력인지 먼저 확인
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed.teams) { showLoading(false); initDashboard(parsed); return; }
+  } catch(e) {}
+
+  const res = await fetch(`${API_BASE}/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || '텍스트 분석 실패');
+  showLoading(false);
+  initDashboard(data.data);
+}
+
+function loadSample() { initDashboard(SAMPLE); }
+
+/* ─── Loading / Error ─── */
+function showLoading(v) {
+  document.getElementById('loading-overlay').style.display = v ? 'flex' : 'none';
+}
+function showError(msg) {
+  const t = document.getElementById('error-toast');
+  t.textContent = '❌ ' + msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 4000);
+}
+
+/* ─── 앱 초기화 ─── */
+function resetApp() {
+  DATA = null; activeTeam = null; activeFilter = '전체'; selectedFile = null;
+  document.getElementById('screen-upload').style.display = 'flex';
+  document.getElementById('screen-dashboard').style.display = 'none';
+  document.getElementById('file-selected').style.display = 'none';
+  document.getElementById('fi').value = '';
+}
+
+function initDashboard(json) {
+  DATA = json;
+  document.getElementById('screen-upload').style.display = 'none';
+  document.getElementById('screen-dashboard').style.display = 'flex';
+  const meta = [json.weekNumber, json.reportDate].filter(Boolean).join(' · ');
+  document.getElementById('header-meta').textContent = meta;
+  renderExec(); renderShared(); renderFilterBtns(); renderNav(); renderCards();
+  if (DATA.teams?.length) selectTeam(DATA.teams[0].teamName);
+}
+
+/* ─── Executive Summary (줄 분리) ─── */
+function renderExec() {
+  const c = document.getElementById('exec-rows'); c.innerHTML = '';
+  const items = DATA.executiveSummary?.length ? DATA.executiveSummary : ['금주 Executive Summary 미기재'];
+  items.forEach((txt, i) => {
+    const row = document.createElement('div');
+    row.className = 'exec-row';
+    row.innerHTML = `<span class="exec-num">${i+1}</span><span style="font-size:12px;color:rgba(17,24,39,.78);line-height:1.65">${txt}</span>`;
+    c.appendChild(row);
+  });
+}
+
+/* ─── Shared Issues ─── */
+function renderShared() {
+  const el = document.getElementById('shared-issues'); el.innerHTML = '';
+  const items = DATA.sharedIssues?.length ? DATA.sharedIssues : ['공유 이슈 없음'];
+  items.forEach(iss => {
+    const d = document.createElement('div'); d.className = 'issue-pill';
+    d.innerHTML = `<span style="color:#00A3E0;font-weight:800;flex-shrink:0">⚡</span><span>${iss}</span>`;
+    el.appendChild(d);
+  });
+}
+
+/* ─── Filter Buttons ─── */
+function renderFilterBtns() {
+  const c = document.getElementById('filter-btns'); c.innerHTML = '';
+  ['전체','정상','주의','위험'].forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'fbtn' + (f===activeFilter?' active':'');
+    b.textContent = f;
+    b.onclick = () => { activeFilter=f; renderFilterBtns(); renderCards(); };
+    c.appendChild(b);
+  });
+}
+
+/* ─── Team Nav ─── */
+function renderNav() {
+  const nav = document.getElementById('team-nav'); nav.innerHTML = '';
+  DATA.teams.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'nav-item' + (activeTeam===t.teamName?' active':'');
+    b.innerHTML = `<span class="nav-dot nav-dot-${t.status}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.teamName}</span>`;
+    b.onclick = () => selectTeam(t.teamName);
+    nav.appendChild(b);
+  });
+}
+
+/* ─── KPI Cards ─── */
+function filtered() {
+  const kw = (document.getElementById('search')?.value||'').toLowerCase();
+  return DATA.teams.filter(t =>
+    (activeFilter==='전체' || t.status===activeFilter) &&
+    (!kw || JSON.stringify(t).toLowerCase().includes(kw))
+  );
+}
+
+function renderCards() {
+  const g = document.getElementById('kpi-grid'); g.innerHTML = '';
+  const list = filtered();
+  if (!list.length) {
+    g.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:12px;color:#9ca3af;padding:16px">해당 조건의 팀이 없습니다.</div>';
+    return;
+  }
+  list.forEach(t => {
+    const c = document.createElement('div');
+    c.className = `kpi-card status-${t.status} p-4` + (activeTeam===t.teamName?' selected':'');
+    c.onclick = () => selectTeam(t.teamName);
+    c.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:4px">
+        <span style="font-size:12px;font-weight:700">${t.teamName}</span>
+        <span class="badge badge-${t.status}">${t.status}</span>
+      </div>
+      <p style="font-size:10.5px;color:#9ca3af;font-family:'DM Mono',monospace;margin-bottom:6px;line-height:1.4">${t.kpi||'미기재'}</p>
+      <p style="font-size:11px;color:rgba(17,24,39,.58);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${t.summary||''}</p>
+    `;
+    g.appendChild(c);
+  });
+}
+
+/* ─── Detail Panel (이미지2 스타일: 가로 3열) ─── */
+function mkList(items, iconChar, iconBg, iconColor) {
+  if (!items?.length) return `<div class="det-item" style="color:#9ca3af">미기재</div>`;
+  return items.map((item, idx) => `
+    <div class="det-item" style="animation:fadeUp .3s ease ${idx*0.05}s both">
+      <span class="det-icon ${iconBg}" style="${iconColor}">${iconChar}</span>
+      <span>${item}</span>
+    </div>
+  `).join('');
+}
+
+function selectTeam(name) {
+  activeTeam = name; renderCards(); renderNav();
+  const t = DATA.teams.find(x => x.teamName===name); if (!t) return;
+
+  const barColor = {정상:'#22c55e', 주의:'#eab308', 위험:'#ef4444'};
+  const barWidth = {정상:'100%', 주의:'55%', 위험:'25%'};
+  const sColor   = {정상:'#16a34a', 주의:'#ca8a04', 위험:'#dc2626'};
+
+  document.getElementById('detail-inner').className = 'anim-fade';
+
+  /* ── 이미지2 레이아웃 ──
+     [팀명 + 상태] [요약문]         [KPI]
+     ─────────────────────────────────────
+     [주요 성과]  [오픈 리스크]  [차주 계획]   ← 가로 3열
+  */
+  document.getElementById('detail-inner').innerHTML = `
+
+    <!-- 헤더 행 -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1.5px solid #E6E8EF">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <div style="flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <h2 style="font-size:18px;font-weight:800;color:#111827">${t.teamName}</h2>
+            <span class="badge badge-${t.status}">${t.status}</span>
+          </div>
+          <p style="font-size:13px;color:#6b7280;line-height:1.6">${t.summary||'요약 없음'}</p>
+        </div>
+      </div>
+      <!-- KPI 박스 -->
+      <div style="flex-shrink:0;background:#f5e6ea;border-radius:12px;padding:10px 16px;text-align:right">
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">KPI</div>
+        <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#A50034;white-space:nowrap">${t.kpi&&t.kpi!=='미기재'?t.kpi:'미기재'}</div>
+      </div>
+    </div>
+
+    <!-- 상태 바 -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f9fafb;border-radius:10px;border:1px solid #E6E8EF">
+      <span style="font-size:11px;color:#6b7280;font-weight:600;white-space:nowrap">영업 상태</span>
+      <div style="flex:1;height:5px;background:#e5e7eb;border-radius:999px;overflow:hidden">
+        <div style="height:100%;border-radius:999px;background:${barColor[t.status]};width:${barWidth[t.status]};transition:width .7s ease"></div>
+      </div>
+      <span style="font-size:11px;font-weight:800;color:${sColor[t.status]};white-space:nowrap">${t.status}</span>
+      <div style="display:flex;gap:6px;margin-left:4px">
+        <span style="font-size:11px;background:#dcfce7;color:#166534;border-radius:6px;padding:2px 8px;font-weight:700">${t.highlights?.length||0} 성과</span>
+        <span style="font-size:11px;background:#fee2e2;color:#991b1b;border-radius:6px;padding:2px 8px;font-weight:700">${t.risks?.length||0} 리스크</span>
+        <span style="font-size:11px;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-weight:700">${t.nextActions?.length||0} 계획</span>
+      </div>
+    </div>
+
+    <!-- ── 가로 3열 (이미지2 스타일) ── -->
+    <div style="display:flex;gap:16px">
+
+      <!-- 주요 성과 -->
+      <div class="det-section det-ok">
+        <div class="det-head">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          주요 성과
+        </div>
+        <div class="det-body">
+          ${mkList(t.highlights, '✓', 'bg-green-100', 'color:#15803d')}
+        </div>
+      </div>
+
+      <!-- 오픈 리스크 -->
+      <div class="det-section det-risk">
+        <div class="det-head">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".8" fill="currentColor"/></svg>
+          오픈 리스크
+        </div>
+        <div class="det-body">
+          ${mkList(t.risks, '!', 'bg-red-100', 'color:#b91c1c')}
+        </div>
+      </div>
+
+      <!-- 차주 계획 -->
+      <div class="det-section det-next">
+        <div class="det-head">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          차주 계획
+        </div>
+        <div class="det-body">
+          ${mkList(t.nextActions, '→', 'bg-blue-100', 'color:#1d4ed8')}
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+/* ─── Download ─── */
+function downloadDashboard() {
+  const w = DATA.weekNumber||'', d = DATA.reportDate||new Date().toISOString().slice(0,10);
+  const blob = new Blob([generateStatic(DATA)], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `주간보고_대시보드_${w}_${d}.html`;
+  a.click();
+}
+
+/* ─── 정적 공유용 HTML 생성 ─── */
+function generateStatic(data) {
+  const ej = JSON.stringify(data).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
+  return `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>주간보고 대시보드 ${data.weekNumber||''} ${data.reportDate||''}</title>
+<script src="https://cdn.tailwindcss.com"><\/script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;background:#F7F7FB;color:#111827}
+.hero{background:linear-gradient(135deg,#A50034 0%,#7a0025 45%,#003a5c 100%)}
+#exec-sticky{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(230,232,239,.9);box-shadow:0 2px 20px rgba(165,0,52,.07)}
+.exec-row{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(165,0,52,.1)}.exec-row:last-child{border-bottom:none}
+.exec-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-width:20px;background:#A50034;color:#fff;border-radius:50%;font-size:10px;font-weight:700;margin-top:2px;flex-shrink:0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .18s;font-size:12px;font-weight:500;color:#4b5563;border:1.5px solid transparent;width:100%;text-align:left}
+.nav-item:hover{background:#f5e6ea;color:#A50034}.nav-item.active{background:#A50034;color:#fff;font-weight:700}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.nav-dot-정상{background:#22c55e}.nav-dot-주의{background:#eab308}.nav-dot-위험{background:#ef4444}
+.kpi-card{background:#fff;border:1.5px solid #E6E8EF;border-radius:1.125rem;box-shadow:0 1px 3px rgba(17,24,39,.06),0 4px 16px -4px rgba(17,24,39,.08);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#E6E8EF}
+.kpi-card.status-정상::before{background:#22c55e}.kpi-card.status-주의::before{background:#eab308}.kpi-card.status-위험::before{background:#ef4444}
+.kpi-card:hover{box-shadow:0 4px 24px -4px rgba(165,0,52,.18);transform:translateY(-2px);border-color:#A50034}
+.kpi-card.selected{border-color:#A50034;box-shadow:0 0 0 2.5px #A50034}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-정상{background:#dcfce7;color:#166534}.badge-주의{background:#fef9c3;color:#854d0e}.badge-위험{background:#fee2e2;color:#991b1b}
+.fbtn{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:600;border:1.5px solid #E6E8EF;background:#fff;color:#6b7280;cursor:pointer;transition:all .15s}
+.fbtn:hover{border-color:#A50034;color:#A50034}.fbtn.active{background:#A50034;color:#fff;border-color:#A50034}
+#detail-panel{background:#fff;border:1.5px solid #E6E8EF;border-radius:1.5rem;box-shadow:0 2px 16px rgba(17,24,39,.07);overflow-y:auto}
+.det-section{border-radius:1rem;border:1.5px solid #E6E8EF;overflow:hidden;flex:1}
+.det-head{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.det-ok .det-head{background:#f0fdf4;color:#15803d;border-bottom:1px solid #bbf7d0}
+.det-risk .det-head{background:#fef2f2;color:#b91c1c;border-bottom:1px solid #fecaca}
+.det-next .det-head{background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #bfdbfe}
+.det-body{padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.det-item{display:flex;gap:10px;padding:7px 8px;border-radius:8px;font-size:12.5px;line-height:1.6;color:#374151}
+.det-item:hover{background:#f9fafb}
+.det-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;font-weight:800}
+.issue-pill{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;font-size:11px;color:#1e40af;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.anim-fade{animation:fadeUp .35s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#E6E8EF;border-radius:99px}
+</style></head>
+<body>
+<div style="display:flex;flex-direction:column;height:100vh">
+  <div class="hero" style="padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="rgba(255,255,255,.15)"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="sans-serif">LG</text></svg>
+      <div><span style="color:#fff;font-weight:800;font-size:15px">프로젝트영업담당 주간보고</span>
+      <span style="margin-left:12px;color:rgba(255,255,255,.45);font-size:11px;font-family:'DM Mono',monospace">${(data.weekNumber||'')+' · '+(data.reportDate||'')}</span></div>
+    </div>
+    <span style="font-size:11px;color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.2);padding:4px 12px;border-radius:999px">공유용 · 읽기 전용</span>
+  </div>
+  <div id="exec-sticky" style="padding:10px 24px;flex-shrink:0">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect width="16" height="16" rx="4" fill="#A50034"/><path d="M4 8h8M4 5.5h5M4 10.5h6" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span style="font-size:11px;font-weight:800;color:#A50034;text-transform:uppercase;letter-spacing:.1em">Executive Summary</span>
+      </div>
+      <div id="exec-rows" style="padding-left:4px;display:flex;flex-direction:column;gap:0"></div>
+    </div>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;gap:16px;padding:12px 16px;max-width:1280px;margin:0 auto;width:100%">
+    <div style="width:188px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:12px">
+        <p style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;padding:0 4px;margin-bottom:8px">팀 목록</p>
+        <nav id="team-nav" style="display:flex;flex-direction:column;gap:4px"></nav>
+      </div>
+      <div style="background:#fff;border-radius:16px;border:1.5px solid #E6E8EF;padding:12px;flex:1;min-height:0;overflow-y:auto">
+        <p style="font-size:10px;font-weight:800;color:#00A3E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">공유 이슈</p>
+        <div id="shared-issues" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <div id="filter-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <input id="search" type="text" placeholder="키워드 검색…" oninput="renderCards()" style="padding:6px 12px 6px 12px;font-size:11px;border:1.5px solid #E6E8EF;border-radius:999px;outline:none;background:#fff;width:152px;font-family:inherit;margin-left:auto"/>
+      </div>
+      <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0"></div>
+      <div id="detail-panel" style="flex:1;padding:24px;overflow-y:auto">
+        <div id="detail-inner" style="font-size:13px;color:#9ca3af;display:flex;align-items:center;justify-content:center;height:100%">팀 카드를 선택하면 상세 내용이 표시됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const DATA=${ej};
+let activeTeam=null,activeFilter='전체';
+function init(){renderExec();renderShared();renderFilterBtns();renderNav();renderCards();if(DATA.teams?.length)selectTeam(DATA.teams[0].teamName);}
+function renderExec(){const c=document.getElementById('exec-rows');c.innerHTML='';(DATA.executiveSummary?.length?DATA.executiveSummary:['Executive Summary 미기재']).forEach((txt,i)=>{const r=document.createElement('div');r.className='exec-row';r.innerHTML='<span class="exec-num">'+(i+1)+'</span><span style="font-size:12px;color:rgba(17,24,39,.78);line-height:1.65">'+txt+'</span>';c.appendChild(r);});}
+function renderShared(){const el=document.getElementById('shared-issues');el.innerHTML='';(DATA.sharedIssues?.length?DATA.sharedIssues:['공유 이슈 없음']).forEach(iss=>{const d=document.createElement('div');d.className='issue-pill';d.innerHTML='<span style="color:#00A3E0;font-weight:800;flex-shrink:0">⚡</span><span>'+iss+'</span>';el.appendChild(d);});}
+function renderFilterBtns(){const c=document.getElementById('filter-btns');c.innerHTML='';['전체','정상','주의','위험'].forEach(f=>{const b=document.createElement('button');b.className='fbtn'+(f===activeFilter?' active':'');b.textContent=f;b.onclick=()=>{activeFilter=f;renderFilterBtns();renderCards();};c.appendChild(b);});}
+function renderNav(){const nav=document.getElementById('team-nav');nav.innerHTML='';DATA.teams.forEach(t=>{const b=document.createElement('button');b.className='nav-item'+(activeTeam===t.teamName?' active':'');b.innerHTML='<span class="nav-dot nav-dot-'+t.status+'"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.teamName+'</span>';b.onclick=()=>selectTeam(t.teamName);nav.appendChild(b);});}
+function filtered(){const kw=(document.getElementById('search')?.value||'').toLowerCase();return DATA.teams.filter(t=>(activeFilter==='전체'||t.status===activeFilter)&&(!kw||JSON.stringify(t).toLowerCase().includes(kw)));}
+function renderCards(){const g=document.getElementById('kpi-grid');g.innerHTML='';const list=filtered();if(!list.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;font-size:12px;color:#9ca3af;padding:16px">해당 조건의 팀이 없습니다.</div>';return;}list.forEach(t=>{const c=document.createElement('div');c.className='kpi-card status-'+t.status+' p-4'+(activeTeam===t.teamName?' selected':'');c.onclick=()=>selectTeam(t.teamName);c.innerHTML='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:4px"><span style="font-size:12px;font-weight:700">'+t.teamName+'</span><span class="badge badge-'+t.status+'">'+t.status+'</span></div><p style="font-size:10.5px;color:#9ca3af;font-family:monospace;margin-bottom:6px;line-height:1.4">'+(t.kpi||'미기재')+'</p><p style="font-size:11px;color:rgba(17,24,39,.58);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+(t.summary||'')+'</p>';g.appendChild(c);});}
+function mkList(items,ic,ib,icol){if(!items?.length)return'<div class="det-item" style="color:#9ca3af">미기재</div>';return items.map(item=>'<div class="det-item"><span class="det-icon '+ib+'" style="'+icol+'">'+ic+'</span><span>'+item+'</span></div>').join('');}
+function selectTeam(name){activeTeam=name;renderCards();renderNav();const t=DATA.teams.find(x=>x.teamName===name);if(!t)return;const bc={정상:'#22c55e',주의:'#eab308',위험:'#ef4444'},bw={정상:'100%',주의:'55%',위험:'25%'},sc={정상:'#16a34a',주의:'#ca8a04',위험:'#dc2626'};document.getElementById('detail-inner').className='anim-fade';document.getElementById('detail-inner').innerHTML='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1.5px solid #E6E8EF"><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><h2 style="font-size:18px;font-weight:800">'+t.teamName+'</h2><span class="badge badge-'+t.status+'">'+t.status+'</span></div><p style="font-size:13px;color:#6b7280;line-height:1.6">'+(t.summary||'요약 없음')+'</p></div><div style="flex-shrink:0;background:#f5e6ea;border-radius:12px;padding:10px 16px;text-align:right"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">KPI</div><div style="font-family:monospace;font-size:12px;font-weight:700;color:#A50034;white-space:nowrap">'+(t.kpi&&t.kpi!=="미기재"?t.kpi:"미기재")+'</div></div></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f9fafb;border-radius:10px;border:1px solid #E6E8EF"><span style="font-size:11px;color:#6b7280;font-weight:600;white-space:nowrap">영업 상태</span><div style="flex:1;height:5px;background:#e5e7eb;border-radius:999px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+bc[t.status]+';width:'+bw[t.status]+'"></div></div><span style="font-size:11px;font-weight:800;color:'+sc[t.status]+';white-space:nowrap">'+t.status+'</span><div style="display:flex;gap:6px;margin-left:4px"><span style="font-size:11px;background:#dcfce7;color:#166534;border-radius:6px;padding:2px 8px;font-weight:700">'+(t.highlights?.length||0)+' 성과</span><span style="font-size:11px;background:#fee2e2;color:#991b1b;border-radius:6px;padding:2px 8px;font-weight:700">'+(t.risks?.length||0)+' 리스크</span><span style="font-size:11px;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-weight:700">'+(t.nextActions?.length||0)+' 계획</span></div></div><div style="display:flex;gap:16px"><div class="det-section det-ok"><div class="det-head"><svg width="14" height="14" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>주요 성과</div><div class="det-body">'+mkList(t.highlights,'✓','bg-green-100','color:#15803d')+'</div></div><div class="det-section det-risk"><div class="det-head"><svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".8" fill="currentColor"/></svg>오픈 리스크</div><div class="det-body">'+mkList(t.risks,'!','bg-red-100','color:#b91c1c')+'</div></div><div class="det-section det-next"><div class="det-head"><svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>차주 계획</div><div class="det-body">'+mkList(t.nextActions,'→','bg-blue-100','color:#1d4ed8')+'</div></div></div>';}
+init();
+<\/script>
+</body></html>`;
+}
+</script>
+</body>
+</html>
